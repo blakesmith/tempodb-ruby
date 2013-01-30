@@ -81,4 +81,31 @@ describe TempoDB::Client do
     end
   end
 
+  describe "write_id" do
+    it "adds data points to the specific series id" do
+      stub_request(:post, "https://api.tempo-db.com/v1/series/id/0e3178aea7964c4cb1a15db1e80e2a7f/data/").
+        to_return(:status => 200, :body => "", :headers => {})
+      points = [
+              TempoDB::DataPoint.new(Time.utc(2012, 1, 1, 1, 0, 0), 12.34),
+              TempoDB::DataPoint.new(Time.utc(2012, 1, 1, 1, 1, 0), 1.874),
+              TempoDB::DataPoint.new(Time.utc(2012, 1, 1, 1, 2, 0), 21.52)
+             ]
+      client = TempoDB::Client.new("key", "secret")
+      client.write_id("0e3178aea7964c4cb1a15db1e80e2a7f", points).should == {}
+    end
+  end
+
+  describe "write_key" do
+    it "adds data points to the specific series key" do
+      stub_request(:post, "https://api.tempo-db.com/v1/series/key/key3/data/").
+        to_return(:status => 200, :body => "", :headers => {})
+      points = [
+              TempoDB::DataPoint.new(Time.utc(2012, 1, 1, 1, 0, 0), 12.34),
+              TempoDB::DataPoint.new(Time.utc(2012, 1, 1, 1, 1, 0), 1.874),
+              TempoDB::DataPoint.new(Time.utc(2012, 1, 1, 1, 2, 0), 21.52)
+             ]
+      client = TempoDB::Client.new("key", "secret")
+      client.write_key("key3", points).should == {}
+    end
+  end
 end
