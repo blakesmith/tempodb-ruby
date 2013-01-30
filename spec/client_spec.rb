@@ -11,12 +11,20 @@ describe TempoDB::Client do
   describe "create_series" do
     it "creates a series by key name" do
       stub_request(:post, "https://api.tempo-db.com/v1/series/").
-        with(:body => "{\"key\":\"key2\"}").
         to_return(:status => 200, :body => response_fixture('create_series.json'), :headers => {})
       keyname = "key2"
       client = TempoDB::Client.new("key", "secret")
       series = client.create_series(keyname)
       series.key.should == keyname
+    end
+
+    context "creating a series that already exists" do
+      it "throws a TempoDBClientError exception" do
+        stub_request(:post, "https://api.tempo-db.com/v1/series/").
+          to_return(:status => 409, :body => response_fixture('create_series_non_unique.json'), :headers => {})
+        client = TempoDB::Client.new("key", "secret")
+        lambda { client.create_series("key2") }.should raise_error(TempoDB::TempoDBClientError)
+      end
     end
   end
 
@@ -65,6 +73,17 @@ describe TempoDB::Client do
       set = client.read_key("key1", start, stop)
       set.data.all? { |d| d.is_a?(TempoDB::DataPoint) }.should be_true
       set.data.size.should == 1440
+    end
+
+    context "with a series that does not exist" do
+      it "throws a TempoDBClientError exception" do
+        start = Time.parse("2012-01-01 00:00 UTC")
+        stop = Time.parse("2012-01-02 00:00 UTC")
+        stub_request(:get, "https://api.tempo-db.com/v1/series/key/non-existent/data/?end=2012-01-02T00:00:00.000Z&function=&interval=&start=2012-01-01T00:00:00.000Z&tz=").
+          to_return(:status => 403, :body => "", :headers => {})
+        client = TempoDB::Client.new("key", "secret")
+        lambda { client.read_key("non-existent", start, stop) }.should raise_error(TempoDB::TempoDBClientError)
+      end
     end
   end
 
@@ -120,6 +139,20 @@ describe TempoDB::Client do
               { :key => 'key3', :v => 324.991 }
              ]
       client.write_bulk(ts, data).should == {}
+    end
+
+    context "with some series that exist and others that don't" do
+      it "creates the non-existent series and writes to all series" do
+        stub_request(:post, "https://api.tempo-db.com/v1/data/").
+          to_return(:status => 200, :body => "", :headers => {})
+        client = TempoDB::Client.new("key", "secret")
+        ts = Time.utc(2012, 1, 8, 1, 21)
+        data = [
+                { :id => 'non-existent', :v => 4.164 },
+                { :key => 'key3', :v => 324.991 }
+               ]
+        client.write_bulk(ts, data).should == {}
+      end
     end
   end
 
