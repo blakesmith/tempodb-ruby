@@ -108,4 +108,98 @@ describe TempoDB::Client do
       client.write_key("key3", points).should == {}
     end
   end
+
+  describe "write_bulk" do
+    it "writes multiple values to multiple series at the same timestamp" do
+      stub_request(:post, "https://api.tempo-db.com/v1/data/").
+        to_return(:status => 200, :body => "", :headers => {})
+      client = TempoDB::Client.new("key", "secret")
+      ts = Time.utc(2012, 1, 8, 1, 21)
+      data = [
+              { :id => '0e3178aea7964c4cb1a15db1e80e2a7f', :v => 4.164 },
+              { :key => 'key3', :v => 324.991 }
+             ]
+      client.write_bulk(ts, data).should == {}
+    end
+  end
+
+  describe "increment_id" do
+    it "adds the value to the datapoint value for the given series id" do
+      stub_request(:post, "https://api.tempo-db.com/v1/series/id/0e3178aea7964c4cb1a15db1e80e2a7f/increment/").
+        to_return(:status => 200, :body => "", :headers => {})
+      client = TempoDB::Client.new("key", "secret")
+      points = [
+                TempoDB::DataPoint.new(Time.utc(2012, 1, 1, 1, 0, 0), 1),
+                TempoDB::DataPoint.new(Time.utc(2012, 1, 1, 1, 1, 0), 2),
+                TempoDB::DataPoint.new(Time.utc(2012, 1, 1, 1, 2, 0), 1)
+               ]
+      client.increment_id("0e3178aea7964c4cb1a15db1e80e2a7f", points).should == {}
+    end
+  end
+
+  describe "increment_key" do
+    it "adds the value to the datapoint value for the given series key" do
+      stub_request(:post, "https://api.tempo-db.com/v1/series/key/key3/increment/").
+        to_return(:status => 200, :body => "", :headers => {})
+      client = TempoDB::Client.new("key", "secret")
+      points = [
+                TempoDB::DataPoint.new(Time.utc(2012, 1, 1, 1, 0, 0), 1),
+                TempoDB::DataPoint.new(Time.utc(2012, 1, 1, 1, 1, 0), 2),
+                TempoDB::DataPoint.new(Time.utc(2012, 1, 1, 1, 2, 0), 1)
+               ]
+      client.increment_key("key3", points).should == {}
+    end
+  end
+
+  describe "increment_bulk" do
+    it "increments multiple series at the same timestamp with multiple values" do
+      stub_request(:post, "https://api.tempo-db.com/v1/increment/").
+       to_return(:status => 200, :body => "", :headers => {})
+      client = TempoDB::Client.new("key", "secret")
+      ts = Time.utc(2012, 1, 8, 1, 21)
+      data = [
+              { :id => '0e3178aea7964c4cb1a15db1e80e2a7f', :v => 4.164 },
+              { :key => 'key3', :v => 324.991 }
+             ]
+      client.increment_bulk(ts, data).should == {}
+    end
+  end
+
+  describe "delete_id" do
+    it "deletes a single point when the start and stop are the same time" do
+      stub_request(:delete, "https://api.tempo-db.com/v1/series/id/38268c3b231f1266a392931e15e99231/data/?end=2012-01-01T00:00:00.000Z&start=2012-01-01T00:00:00.000Z").
+        to_return(:status => 200, :body => "", :headers => {})
+      client = TempoDB::Client.new("key", "secret")
+      time = Time.utc(2012, 1, 1)
+      client.delete_id("38268c3b231f1266a392931e15e99231", time, time).should == {}
+    end
+
+    it "deletes a range of points between the start and stop" do
+      stub_request(:delete, "https://api.tempo-db.com/v1/series/id/38268c3b231f1266a392931e15e99231/data/?end=2012-01-02T00:00:00.000Z&start=2012-01-01T00:00:00.000Z").
+        to_return(:status => 200, :body => "", :headers => {})
+      client = TempoDB::Client.new("key", "secret")
+      start = Time.utc(2012, 1, 1)
+      stop = Time.utc(2012, 1, 2)
+      client.delete_id("38268c3b231f1266a392931e15e99231", start, stop).should == {}
+    end
+  end
+
+  describe "delete_key" do
+    it "deletes a single point when the start and stop are the same time" do
+      stub_request(:delete, "https://api.tempo-db.com/v1/series/key/key3/data/?end=2012-01-01T00:00:00.000Z&start=2012-01-01T00:00:00.000Z").
+        to_return(:status => 200, :body => "", :headers => {})
+      client = TempoDB::Client.new("key", "secret")
+      time = Time.utc(2012, 1, 1)
+      client.delete_key("key3", time, time).should == {}
+    end
+
+    it "deletes a range of points between the start and stop" do
+      stub_request(:delete, "https://api.tempo-db.com/v1/series/key/key3/data/?end=2012-01-02T00:00:00.000Z&start=2012-01-01T00:00:00.000Z").
+        to_return(:status => 200, :body => "", :headers => {})
+      client = TempoDB::Client.new("key", "secret")
+      start = Time.utc(2012, 1, 1)
+      stop = Time.utc(2012, 1, 2)
+      client.delete_key("key3", start, stop).should == {}
+    end
+  end
 end
